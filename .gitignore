@@ -3,3 +3,7 @@ node_modules/
 .dev.vars
 *.log
 .DS_Store
+
+# 本地部署用 SSH 私钥，切勿提交
+.deploy_key_ed25519
+.deploy_key_ed25519.pub

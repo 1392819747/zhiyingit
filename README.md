@@ -43,12 +43,12 @@ npx wrangler login
 npm run deploy
 ```
 
-### 方式 D：导入 GitHub 仓库（推送后 Cloudflare 自动部署）
+### 方式 D：导入 GitHub 仓库（当前使用：`1392819747/zhiyingit`）
 
 仓库已含 `wrangler.toml`，Cloudflare 导入时会自动识别并按 Worker 部署：
 
-1. 把本目录推到 GitHub（`git init -b main && git add . && git commit && git push`）
-2. Cloudflare → **Workers & Pages** → **Create** → **Import a repository** → 授权 GitHub → 选择 `github-proxy`
+1. 把本目录推到 GitHub 仓库（如 `zhiyingit`）的 main 分支
+2. Cloudflare → **Workers & Pages** → **Create** → **Import a repository** → 授权 GitHub → 选择该仓库
 3. 构建命令会自动填为 `wrangler deploy`，保持默认直接 **Deploy**
 4. 之后每次 `git push` 到 main 分支都会自动重新部署
 
