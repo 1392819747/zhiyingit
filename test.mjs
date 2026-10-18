@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { parseTargetUrl, rewriteBody, isAllowedHost, normalizeUserInput } from './worker.js';
+import { parseTargetUrl, rewriteBody, isAllowedHost, normalizeUserInput } from './_worker.js';
 
 // ---------- parseTargetUrl ----------
 let t = parseTargetUrl('/https://github.com/torvalds/linux', '');

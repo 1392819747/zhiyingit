@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
@@ -9,6 +10,9 @@ const WORKER_PORT = 8787;
 const MOCK_PORT = 8788;
 const ORIGIN = `http://127.0.0.1:${WORKER_PORT}`;
 const MOCK = `http://127.0.0.1:${MOCK_PORT}`;
+// 仓库根目录不放 wrangler.toml（避免 Cloudflare Git 集成把项目识别为 Worker），
+// 本地联调时动态生成一份临时配置，跑完即删
+const DEV_CONFIG = path.join(HERE, 'wrangler.dev.toml');
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -32,10 +36,24 @@ async function main() {
   const mock = await startMock(MOCK_PORT);
   console.log(`mock upstream ready on ${MOCK}`);
 
+  fs.writeFileSync(
+    DEV_CONFIG,
+    [
+      'name = "github-proxy-dev"',
+      'main = "_worker.js"',
+      'compatibility_date = "2025-10-01"',
+      '',
+      '[vars]',
+      '# 本地联调用：允许代理本机 mock 上游',
+      'EXTRA_HOSTS = "127.0.0.1"',
+      '',
+    ].join('\n')
+  );
+
   const npx = path.join(path.dirname(process.execPath), 'npx');
   const wrangler = spawn(
     npx,
-    ['--yes', 'wrangler@4', 'dev', '--env', 'dev', '--ip', '127.0.0.1', '--port', String(WORKER_PORT)],
+    ['--yes', 'wrangler@4', 'dev', '-c', 'wrangler.dev.toml', '--ip', '127.0.0.1', '--port', String(WORKER_PORT)],
     { cwd: HERE, stdio: ['ignore', 'pipe', 'pipe'] }
   );
   let log = '';
@@ -99,6 +117,7 @@ async function main() {
   } finally {
     wrangler.kill('SIGTERM');
     mock.close();
+    fs.rmSync(DEV_CONFIG, { force: true });
     if (process.env.E2E_DEBUG) console.log(log);
   }
 }

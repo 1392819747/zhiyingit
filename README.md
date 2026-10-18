@@ -1,6 +1,6 @@
-# GitHub 加速站（Cloudflare Worker）
+# GitHub 加速站（Cloudflare Pages）
 
-把 GitHub 的网页、Raw 文件、Release 下载、git clone 流量代理到 Cloudflare 全球边缘网络，缓解国内访问 GitHub 慢/丢包的问题。单文件 Worker，零依赖，免费额度即可日用。
+把 GitHub 的网页、Raw 文件、Release 下载、git clone 流量代理到 Cloudflare 全球边缘网络，缓解国内访问 GitHub 慢/丢包的问题。单文件 `_worker.js`，零依赖，免费额度即可日用。
 
 ## 功能
 
@@ -14,47 +14,41 @@
 
 ## 快速部署
 
-### 方式 A：Pages 直接上传 zip（最快，零工具，推荐）
+### 方式 A：Pages 连接 GitHub 仓库（当前使用，推荐）
 
-用根目录的 **`github-proxy-upload.zip`**（内含 `_worker.js`，无需任何构建）：
+仓库根目录的 `_worker.js` 会被 Cloudflare Pages 识别为 Pages Function（高级模式），接管全部路由：
 
-1. 登录 <https://dash.cloudflare.com> → **Workers & Pages** → **Create** → **Pages** → **Upload assets**
-2. 项目名随意（如 `github-proxy`）→ **Create project** → 上传 `github-proxy-upload.zip` → **Deploy site**
-3. 访问 `https://<项目名>.pages.dev/` 即可使用
-4. （推荐）绑定自己的域名：Pages 项目 → **Custom domains** → 添加 `gh.example.com`（免费版即可，国内访问比 pages.dev 稳）
+1. 把本目录推到 GitHub 仓库的 main 分支
+2. Cloudflare → **Workers & Pages** → **Create** → **Pages** → **Connect to Git** → 授权 GitHub → 选择该仓库
+3. **构建命令留空、输出目录留空** → **Save and Deploy**
+4. 访问 `https://<项目名>.pages.dev/` 即可使用
+5. 之后每次 `git push` 到 main 分支都会自动重新部署
 
-> ⚠️ 上传的 zip **只放 `_worker.js` 一个文件**：
-> - 含 `wrangler.toml` / `package.json` 会被判定为"需要构建的项目"而拒绝；
-> - `_routes.json` 已被上传程序弃用（会提示"不支持 Pages _routes.json"），且并无必要——`_worker.js` 默认接管全部路由。
+> 💡 选 Pages 而不是 Worker 的原因：`*.pages.dev` 域名在国内网络的可达性明显好于 `*.workers.dev`（后者常被 DNS 污染）。
+> ⚠️ 仓库根目录**不要放 `wrangler.toml`**——Cloudflare 检测到它就会按 Worker 部署，拿到的是 workers.dev 域名。
 
-### 方式 B：Workers 控制台粘贴（用 `github-proxy.zip` 解压出的 `worker.js`）
+### 方式 B：Pages 直接上传 zip（零工具，最快）
+
+上传只含 `_worker.js` 一个文件的 zip：
+
+1. **Workers & Pages** → **Create** → **Pages** → **Upload assets**
+2. 项目名随意 → **Create project** → 上传 zip → **Deploy site**
+
+> ⚠️ 上传的 zip **只放 `_worker.js`**：含 `wrangler.toml` / `package.json` 会被判定为"需要构建的项目"而拒绝；`_routes.json` 已被上传程序弃用，且并无必要（`_worker.js` 默认接管全部路由）。
+
+### 方式 C：Workers 控制台粘贴（备用）
 
 1. **Workers & Pages** → **Create** → **Create Worker** → 名字随意 → **Deploy**
-2. 点 **Edit code** → 全选删除 → 粘贴 `worker.js` **全文** → **Deploy**
-3. 访问 `https://<项目名>.<你的子域>.workers.dev/` 即可使用
-4. （推荐）绑定域名：Worker → **Settings** → **Domains & Routes** → **Add Custom Domain**
+2. 点 **Edit code** → 全选删除 → 粘贴 `_worker.js` **全文** → **Deploy**
+3. 得到 `*.workers.dev` 域名（国内访问不稳定，仅作备用）
 
-### 方式 C：Wrangler CLI
+### 绑定自定义域名（可选）
 
-```bash
-cd github-proxy
-npm install
-npx wrangler login
-npm run deploy
-```
-
-### 方式 D：导入 GitHub 仓库（当前使用：`1392819747/zhiyingit`）
-
-仓库已含 `wrangler.toml`，Cloudflare 导入时会自动识别并按 Worker 部署：
-
-1. 把本目录推到 GitHub 仓库（如 `zhiyingit`）的 main 分支
-2. Cloudflare → **Workers & Pages** → **Create** → **Import a repository** → 授权 GitHub → 选择该仓库
-3. 构建命令会自动填为 `wrangler deploy`，保持默认直接 **Deploy**
-4. 之后每次 `git push` 到 main 分支都会自动重新部署
+Pages 项目 → **Custom domains** → 添加如 `gh.example.com`（免费版即可，国内访问最稳）。
 
 ## 使用方法
 
-把 `<域名>` 替换为你的 Worker 域名或自定义域名：
+把 `<域名>` 替换为你的 `*.pages.dev` 域名或自定义域名：
 
 | 场景 | 地址 |
 | --- | --- |
@@ -77,24 +71,22 @@ git config --global url."https://<域名>/https://github.com/".insteadOf "https:
 ```bash
 npm test           # 单元测试：路径解析 / 主机白名单 / URL 改写
 npm run test:e2e   # 端到端：wrangler dev + 本地 mock 上游，验证改写/重定向/缓存/403
-npm run dev        # 交互式本地调试
 ```
+
+端到端测试会自动生成临时 `wrangler.dev.toml`（跑完删除），不影响仓库结构。
 
 ## 注意事项
 
 - **额度**：Cloudflare 免费版 10 万次请求/天；免费版单次调用 CPU 限制 10ms，日常个人使用足够，多人共用建议升级 Pro（$5/月）
 - **私有仓库**：clone 私有仓库时，Git 凭证会经 Cloudflare 边缘转发到 GitHub（与 gh-proxy 等公共服务相同机制）。自建可控，如仍不放心可加 Cloudflare Access 或自定义鉴权头
 - **大文件**：下载为流式透传，不受 100MB 响应体限制
-- **自定义域名**：workers.dev 默认域名在国内不稳定，建议绑定自有域名（无需备案，Worker 自定义域免费版可用）
-- **扩展代理范围**：`wrangler.toml` 的 `EXTRA_HOSTS` 可追加额外主机（逗号分隔），默认只代理 GitHub 相关域名
+- **域名选择**：优先 `*.pages.dev` 或自有域名；`*.workers.dev` 国内 DNS 污染严重，不建议日常使用
 
 ## 文件说明
 
 | 文件 | 说明 |
 | --- | --- |
-| `worker.js` | Worker 主代码（部署只需这一个文件的内容） |
-| `wrangler.toml` | Wrangler 配置（CLI 部署用） |
+| `_worker.js` | 主代码（Pages Function / Worker 入口，部署只需这一个文件） |
 | `test.mjs` | 单元测试 |
 | `test-e2e.mjs` + `mock-upstream.mjs` | 端到端联调（wrangler dev + mock 上游） |
 | `package.json` | npm 脚本与依赖 |
-| `../github-proxy-upload.zip` | 直接上传 Pages 用的压缩包（根目录仅 `_worker.js`） |
