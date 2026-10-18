@@ -1,0 +1,17 @@
+{
+  "name": "github-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "GitHub 加速代理（Cloudflare Worker）",
+  "scripts": {
+    "dev": "wrangler dev --env dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "test": "node test.mjs",
+    "test:e2e": "node test-e2e.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
