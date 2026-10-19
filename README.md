@@ -42,6 +42,17 @@
 2. 点 **Edit code** → 全选删除 → 粘贴 `_worker.js` **全文** → **Deploy**
 3. 得到 `*.workers.dev` 域名（国内访问不稳定，仅作备用）
 
+### 方式 D：EdgeOne Pages（边缘函数，推荐国内访问）
+
+本项目已适配 EdgeOne Pages 的 **Edge Functions**：入口从 Cloudflare Worker 的 `export default { fetch }` 改为 `edge-functions/[[default]].js` 中的 `export async function onRequest(context)`，缓存沿用 `caches.default`，其余逻辑（URL 改写、主机白名单、流式透传）完全复用。
+
+1. EdgeOne Pages 控制台 → **创建项目** → 连接 GitHub 仓库 `1392819747/zhiyingit`
+2. 框架预设选 **无 / 其他**，构建命令与输出目录**都留空**（函数从 `edge-functions/` 目录直接部署，无需构建）
+3. 部署后访问 `https://<项目名>.edgeone.cool/` 即可使用，push 到 main 自动重新部署
+4. 代理地址形态与 Cloudflare 版一致：`https://<域名>/https://github.com/user/repo`
+
+> ⚠️ 不要把本项目当成静态站部署：根目录只有 `_worker.js`（Cloudflare 版参考）和 `edge-functions/`（EdgeOne 版入口），没有 `index.html`，静态部署会"站点不存在"(404)。务必走 Edge Functions 路径。
+
 ### 绑定自定义域名（可选）
 
 Pages 项目 → **Custom domains** → 添加如 `gh.example.com`（免费版即可，国内访问最稳）。
